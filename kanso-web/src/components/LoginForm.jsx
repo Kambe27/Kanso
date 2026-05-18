@@ -1,28 +1,44 @@
 import { useState } from 'react';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { gql, useMutation } from '@apollo/client';
+
+const LOGIN_MUTATION = gql`
+  mutation Login($email: String!, $password: String!) {
+    login(email: $email, password: $password) {
+      token
+    }
+  }
+`;
 
 export default function LoginForm({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  const [login, { loading }] = useMutation(LOGIN_MUTATION);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoginError('');
 
-    // Shortened delay to 500ms so it feels much snappier!
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { data } = await login({
+        variables: { email, password },
+      });
+      
+      localStorage.setItem('token', data.login.token);
       onLoginSuccess();
-    }, 500);
+    } catch (err) {
+      console.error(err);
+      setLoginError('Authentication failed. Please try again.');
+    }
   };
 
   return (
     <div className="w-full max-w-md mx-auto mt-20">
       <div className="bg-zinc-950 p-8 rounded-2xl shadow-[0_8px_30px_rgb(249,115,22,0.1)] border border-zinc-800">
         
-        {/* Header */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-bold text-white tracking-wide mb-2">
             {isLogin ? 'Welcome Back' : 'Join Kanso'}
@@ -34,10 +50,8 @@ export default function LoginForm({ onLoginSuccess }) {
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            {/* Email Input */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-orange-500 transition-colors">
                 <Mail size={18} strokeWidth={1.5} />
@@ -52,7 +66,6 @@ export default function LoginForm({ onLoginSuccess }) {
               />
             </div>
 
-            {/* Password Input */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-orange-500 transition-colors">
                 <Lock size={18} strokeWidth={1.5} />
@@ -68,13 +81,16 @@ export default function LoginForm({ onLoginSuccess }) {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {loginError && (
+            <p className="text-red-500 text-sm text-center font-medium">{loginError}</p>
+          )}
+
           <button
             type="submit"
-            disabled={isLoading || !email || !password}
+            disabled={loading || !email || !password}
             className="w-full group relative flex justify-center items-center gap-2 py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-black bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-950 focus:ring-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgb(249,115,22,0.4)] hover:shadow-[0_0_25px_rgb(249,115,22,0.6)]"
           >
-            {isLoading ? (
+            {loading ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <>
@@ -85,7 +101,6 @@ export default function LoginForm({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Toggle Mode */}
         <div className="mt-8 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
